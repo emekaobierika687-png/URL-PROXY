@@ -1,169 +1,543 @@
 <!doctype html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
-		<title>Areoy Proxy</title>
-		<link rel="shortcut icon" content="favicon.webp" />
-		<script src="/scram/scramjet.all.js"></script>
-		<script src="/baremux/index.js"></script>
-		<link rel="stylesheet" href="index.css" />
-		<link rel="stylesheet" href="browser-chrome.css" />
-		<script src="register-sw.js" defer></script>
-		<script src="search.js" defer></script>
-		<script src="browser-chrome.js" defer></script>
-		<script src="index.js" defer></script>
-		<meta name="keywords" content="language learning, Spanish, French, German, Italian, Mandarin, Japanese, Portuguese, ESL, vocabulary, grammar, conversation practice, language lessons, foreign language, CEFR">
-		<meta name="description" content="LinguaPath teaches Spanish, French, German, Italian, Mandarin, Japanese, and more through bite-sized lessons, conversation drills, and CEFR-aligned practice tests.">
-	</head>
-	<body>
-		<div id="root"></div>
-		<div id="bqtjye" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
-			<h1 id="asdbwy">LinguaPath Lessons</h1>
-			<button id="sabyrl">Start a Lesson</button>
-			<p id="figjhs">Language Learning for Every Level</p>
-		</div>
-		<div style="display:none" aria-hidden="true">
-			<h1>LinguaPath — Learn a New Language One Conversation at a Time</h1>
-		</div>
+<html lang="en" data-theme="mint">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
+    <title>Areoy Proxy</title>
 
-		<!-- Constellation background -->
-		<canvas id="constellation-canvas"></canvas>
+    <!-- Favicon (fixed: was `rel="shortcut icon" content="..."` which never loaded) -->
+    <link rel="icon" type="image/webp" href="favicon.webp" />
+    <meta name="theme-color" content="#050a08" />
 
-		<div class="main-wrapper">
-			<h1 class="site-title" data-text="Areoy Proxy">Areoy Proxy</h1>
-			<form id="sj-form" class="search-wrapper">
-				<input id="sj-search-engine" value="https://duckduckgo.com/?q=%s" type="hidden" />
-				<input id="sj-address" type="text" placeholder="search..." autocomplete="off" />
-			</form>
-			<div class="error-wrapper">
-				<p id="sj-error"></p>
-				<pre id="sj-error-code"></pre>
-			</div>
-			<div class="quick-apps">
-				<div class="quick-apps-header">
-					<span class="quick-apps-label">Quick apps</span>
-					<button class="edit-btn" id="edit-toggle">Edit</button>
-				</div>
-				<div class="apps-grid" id="apps-grid"></div>
-				<div class="add-form" id="add-form" style="display:none;">
-					<div class="add-form-row">
-						<label>Name</label>
-						<input type="text" id="add-name" placeholder="My App" />
-					</div>
-					<div class="add-form-row">
-						<label>URL</label>
-						<input type="text" id="add-url" placeholder="https://example.com" />
-					</div>
-					<div class="add-form-actions">
-						<button class="cancel-btn" id="add-cancel">Cancel</button>
-						<button class="save-btn" id="add-save">Save</button>
-					</div>
-				</div>
-			</div>
-		</div>
+    <!-- Scramjet / BareMux runtime -->
+    <script src="/scram/scramjet.all.js"></script>
+    <script src="/baremux/index.js"></script>
 
-		<!-- Constellation script -->
-		<script>
-		(function () {
-			var canvas = document.getElementById("constellation-canvas");
-			var ctx = canvas.getContext("2d");
-			var stars = [];
+    <!-- Styles -->
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="browser-chrome.css" />
 
-			function resize() {
-				canvas.width = window.innerWidth;
-				canvas.height = window.innerHeight;
-			}
+    <!-- Deferred scripts -->
+    <script src="boot.js" defer></script>
+    <script src="register-sw.js" defer></script>
+    <script src="search.js" defer></script>
+    <script src="browser-chrome.js" defer></script>
+    <script src="index.js" defer></script>
 
-			function createStars() {
-				var W = canvas.width, H = canvas.height;
-				var count = Math.floor((W * H) / 6000);
-				stars = [];
-				for (var i = 0; i < count; i++) {
-					var glowing = Math.random() < 0.1;
-					var glowColor = Math.random() > 0.4 ? "#75ac2a" : "#4a9c7a";
-					stars.push({
-						x: Math.random() * W, y: Math.random() * H,
-						vx: (Math.random() - 0.5) * 0.12,
-						vy: (Math.random() - 0.5) * 0.12,
-						radius: glowing ? Math.random() * 2.5 + 2 : Math.random() * 1.5 + 0.3,
-						color: glowing ? glowColor : "#ffffff",
-						brightness: Math.random() * 0.5 + 0.3,
-						glowing: glowing,
-						glowRadius: glowing ? Math.random() * 25 + 20 : 0
-					});
-				}
-			}
+    <!-- SEO -->
+    <meta name="keywords" content="language learning, Spanish, French, German, Italian, Mandarin, Japanese, Portuguese, ESL, vocabulary, grammar, conversation practice, language lessons, foreign language, CEFR">
+    <meta name="description" content="LinguaPath teaches Spanish, French, German, Italian, Mandarin, Japanese, and more through bite-sized lessons, conversation drills, and CEFR-aligned practice tests.">
+</head>
 
-			function drawStar(s) {
-				if (s.glowing) {
-					var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.glowRadius);
-					g.addColorStop(0, s.color + "70");
-					g.addColorStop(0.3, s.color + "40");
-					g.addColorStop(0.6, s.color + "15");
-					g.addColorStop(1, "transparent");
-					ctx.beginPath(); ctx.arc(s.x, s.y, s.glowRadius, 0, Math.PI * 2);
-					ctx.fillStyle = g; ctx.fill();
-					var cg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 2);
-					cg.addColorStop(0, "#ffffff");
-					cg.addColorStop(0.5, s.color);
-					cg.addColorStop(1, s.color + "80");
-					ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-					ctx.fillStyle = cg; ctx.fill();
-				} else {
-					var alpha = Math.floor(s.brightness * 255).toString(16).padStart(2, "0");
-					ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-					ctx.fillStyle = s.color + alpha; ctx.fill();
-				}
-			}
+<body>
 
-			function drawConnections() {
-				var dist = 100;
-				for (var i = 0; i < stars.length; i++) {
-					for (var j = i + 1; j < stars.length; j++) {
-						var dx = stars[i].x - stars[j].x, dy = stars[i].y - stars[j].y;
-						var d = Math.sqrt(dx * dx + dy * dy);
-						if (d < dist) {
-							var op = (1 - d / dist) * 0.12;
-							var isGlow = stars[i].glowing || stars[j].glowing;
-							ctx.beginPath();
-							ctx.moveTo(stars[i].x, stars[i].y);
-							ctx.lineTo(stars[j].x, stars[j].y);
-							ctx.strokeStyle = isGlow
-								? "rgba(117,172,42," + (op * 1.5) + ")"
-								: "rgba(150,150,150," + op + ")";
-							ctx.lineWidth = isGlow ? 0.8 : 0.4;
-							ctx.stroke();
-						}
-					}
-				}
-			}
+    <!-- ======================================================================
+         Boot screen — shown immediately, hidden by window.bootDone()
+         ====================================================================== -->
+    <div id="boot-screen" role="status" aria-live="polite">
+        <img src="favicon.webp" alt="" width="64" height="64" class="boot-logo" />
+        <div class="boot-text">
+            <div class="boot-bar" aria-hidden="true">
+                <div class="boot-bar-fill"></div>
+            </div>
+            <span id="boot-status">Connecting…</span>
+        </div>
+    </div>
 
-			function animate() {
-				var W = canvas.width, H = canvas.height;
-				ctx.clearRect(0, 0, W, H);
-				drawConnections();
-				for (var i = 0; i < stars.length; i++) {
-					var s = stars[i];
-					s.x += s.vx; s.y += s.vy;
-					if (s.x < -50) s.x = W + 50;
-					if (s.x > W + 50) s.x = -50;
-					if (s.y < -50) s.y = H + 50;
-					if (s.y > H + 50) s.y = -50;
-					if (!s.glowing) {
-						s.brightness += (Math.random() - 0.5) * 0.015;
-						s.brightness = Math.max(0.15, Math.min(0.7, s.brightness));
-					}
-					drawStar(s);
-				}
-				requestAnimationFrame(animate);
-			}
+    <!-- ======================================================================
+         App mount point (React or whatever index.js renders into)
+         ====================================================================== -->
+    <div id="root"></div>
 
-			resize(); createStars(); animate();
-			window.addEventListener("resize", function () { resize(); createStars(); });
-		})();
-		</script>
+    <!-- ======================================================================
+         SEO content — visually hidden but readable to crawlers/screen readers.
+         NOTE: keep this content genuinely available somewhere on the page
+         too, or this is cloaking. See my previous message.
+         ====================================================================== -->
+    <div id="bqtjye" class="sr-only">
+        <h1 id="asdbwy">LinguaPath Lessons</h1>
+        <button id="sabyrl" type="button">Start a Lesson</button>
+        <p id="figjhs">Language Learning for Every Level</p>
+        <h2>LinguaPath — Learn a New Language One Conversation at a Time</h2>
+    </div>
 
-		<script src="apps.js"></script>
-	</body>
+    <!-- ======================================================================
+         Decorative constellation background
+         ====================================================================== -->
+    <canvas id="constellation-canvas" aria-hidden="true" role="presentation"></canvas>
+
+    <!-- ======================================================================
+         Main landing UI
+         ====================================================================== -->
+    <div class="main-wrapper">
+        <h1 class="site-title" data-text="Areoy Proxy">Areoy Proxy</h1>
+
+        <form id="sj-form" class="search-wrapper" autocomplete="off">
+            <input id="sj-search-engine" value="https://duckduckgo.com/?q=%s" type="hidden" />
+            <input
+                id="sj-address"
+                type="text"
+                placeholder="search..."
+                autocomplete="off"
+                spellcheck="false"
+                enterkeyhint="go"
+                aria-label="Search or enter a URL"
+            />
+        </form>
+
+        <div class="error-wrapper">
+            <p id="sj-error" role="alert"></p>
+            <pre id="sj-error-code" aria-hidden="true"></pre>
+        </div>
+
+        <div class="quick-apps">
+            <div class="quick-apps-header">
+                <span class="quick-apps-label">Quick apps</span>
+                <button class="edit-btn" id="edit-toggle" type="button" aria-pressed="false">
+                    Edit
+                </button>
+            </div>
+
+            <div class="apps-grid" id="apps-grid" aria-label="Quick apps"></div>
+
+            <div class="add-form" id="add-form" style="display:none;">
+                <div class="add-form-row">
+                    <label for="add-name">Name</label>
+                    <input type="text" id="add-name" placeholder="My App" maxlength="40" />
+                </div>
+                <div class="add-form-row">
+                    <label for="add-url">URL</label>
+                    <input type="text" id="add-url" placeholder="https://example.com" inputmode="url" />
+                </div>
+                <div class="add-form-actions">
+                    <button type="button" class="cancel-btn" id="add-cancel">Cancel</button>
+                    <button type="button" class="save-btn" id="add-save">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================
+         Constellation background
+         ====================================================================== -->
+    <script>
+    (function () {
+        "use strict";
+
+        var canvas = document.getElementById("constellation-canvas");
+        if (!canvas) return;
+        var ctx = canvas.getContext("2d", { alpha: true });
+        var stars = [];
+        var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        function resize() {
+            var dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width  = Math.floor(window.innerWidth  * dpr);
+            canvas.height = Math.floor(window.innerHeight * dpr);
+            canvas.style.width  = window.innerWidth  + "px";
+            canvas.style.height = window.innerHeight + "px";
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function createStars() {
+            var W = window.innerWidth;
+            var H = window.innerHeight;
+            var count = Math.max(40, Math.floor((W * H) / 9000));
+            stars = [];
+            for (var i = 0; i < count; i++) {
+                var glowing = Math.random() < 0.1;
+                var glowColor = Math.random() > 0.4 ? "#75ac2a" : "#4a9c7a";
+                stars.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    vx: (Math.random() - 0.5) * 0.12,
+                    vy: (Math.random() - 0.5) * 0.12,
+                    radius: glowing ? Math.random() * 2.5 + 2 : Math.random() * 1.5 + 0.3,
+                    color: glowing ? glowColor : "#ffffff",
+                    brightness: Math.random() * 0.5 + 0.3,
+                    glowing: glowing,
+                    glowRadius: glowing ? Math.random() * 25 + 20 : 0
+                });
+            }
+        }
+
+        function hexWithAlpha(hex, alpha) {
+            // hex like "#rrggbb" or "#rgb" or "#rrggbbaa"
+            var h = hex.replace("#", "");
+            if (h.length === 3) {
+                h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+            }
+            var r = parseInt(h.slice(0, 2), 16);
+            var g = parseInt(h.slice(2, 4), 16);
+            var b = parseInt(h.slice(4, 6), 16);
+            return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+        }
+
+        function drawStar(s) {
+            if (s.glowing) {
+                var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.glowRadius);
+                g.addColorStop(0,    hexWithAlpha(s.color, 0.44));
+                g.addColorStop(0.3,  hexWithAlpha(s.color, 0.25));
+                g.addColorStop(0.6,  hexWithAlpha(s.color, 0.08));
+                g.addColorStop(1,    "rgba(0,0,0,0)");
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.glowRadius, 0, Math.PI * 2);
+                ctx.fillStyle = g;
+                ctx.fill();
+
+                var cg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 2);
+                cg.addColorStop(0,   "#ffffff");
+                cg.addColorStop(0.5, s.color);
+                cg.addColorStop(1,   hexWithAlpha(s.color, 0.5));
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = cg;
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = hexWithAlpha(s.color, s.brightness);
+                ctx.fill();
+            }
+        }
+
+        function drawConnections() {
+            var dist = 100;
+            for (var i = 0; i < stars.length; i++) {
+                for (var j = i + 1; j < stars.length; j++) {
+                    var dx = stars[i].x - stars[j].x;
+                    var dy = stars[i].y - stars[j].y;
+                    var d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < dist) {
+                        var op = (1 - d / dist) * 0.12;
+                        var isGlow = stars[i].glowing || stars[j].glowing;
+                        ctx.beginPath();
+                        ctx.moveTo(stars[i].x, stars[i].y);
+                        ctx.lineTo(stars[j].x, stars[j].y);
+                        ctx.strokeStyle = isGlow
+                            ? "rgba(117,172,42," + (op * 1.5) + ")"
+                            : "rgba(150,150,150," + op + ")";
+                        ctx.lineWidth = isGlow ? 0.8 : 0.4;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            var W = window.innerWidth;
+            var H = window.innerHeight;
+            ctx.clearRect(0, 0, W, H);
+            drawConnections();
+            for (var i = 0; i < stars.length; i++) {
+                var s = stars[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                if (s.x < -50) s.x = W + 50;
+                if (s.x > W + 50) s.x = -50;
+                if (s.y < -50) s.y = H + 50;
+                if (s.y > H + 50) s.y = -50;
+                if (!s.glowing) {
+                    s.brightness += (Math.random() - 0.5) * 0.015;
+                    s.brightness = Math.max(0.15, Math.min(0.7, s.brightness));
+                }
+                drawStar(s);
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function renderStatic() {
+            // Reduced-motion: draw one frame, no RAF loop.
+            var W = window.innerWidth;
+            var H = window.innerHeight;
+            ctx.clearRect(0, 0, W, H);
+            drawConnections();
+            for (var i = 0; i < stars.length; i++) drawStar(stars[i]);
+        }
+
+        var resizeTimer;
+        window.addEventListener("resize", function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                resize();
+                createStars();
+                if (reducedMotion) renderStatic();
+            }, 150);
+        });
+
+        resize();
+        createStars();
+        if (reducedMotion) {
+            renderStatic();
+        } else {
+            animate();
+        }
+    })();
+    </script>
+
+    <!-- ======================================================================
+         Quick apps — data layer
+         ====================================================================== -->
+    <script>
+    (function () {
+        "use strict";
+
+        var STORAGE_KEY = "areoy_quick_apps";
+
+        // Default seed shown on first visit.
+        var DEFAULTS = [
+            { name: "Games",    url: "https://poki.com" },
+            { name: "YouTube",  url: "https://youtube.com" },
+            { name: "GitHub",   url: "https://github.com" },
+            { name: "Reddit",   url: "https://reddit.com" },
+            { name: "Discord",  url: "https://discord.com" },
+            { name: "Wikipedia",url: "https://wikipedia.org" }
+        ];
+
+        var grid       = document.getElementById("apps-grid");
+        var editToggle = document.getElementById("edit-toggle");
+        var addForm    = document.getElementById("add-form");
+        var addName    = document.getElementById("add-name");
+        var addUrl     = document.getElementById("add-url");
+        var addSave    = document.getElementById("add-save");
+        var addCancel  = document.getElementById("add-cancel");
+        if (!grid || !editToggle) return;
+
+        var editing = false;
+        var apps = loadApps();
+
+        function loadApps() {
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return DEFAULTS.slice();
+                var parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) return DEFAULTS.slice();
+                return parsed.filter(function (a) {
+                    return a && typeof a.name === "string" && typeof a.url === "string";
+                });
+            } catch (_) {
+                return DEFAULTS.slice();
+            }
+        }
+
+        function saveApps() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
+            } catch (_) { /* quota / disabled storage — ignore */ }
+        }
+
+        function faviconFor(url) {
+            try {
+                var u = new URL(url);
+                return "https://www.google.com/s2/favicons?domain=" +
+                    encodeURIComponent(u.hostname) + "&sz=64";
+            } catch (_) {
+                return "";
+            }
+        }
+
+        function initialFor(name) {
+            var t = (name || "?").trim();
+            return t ? t[0].toUpperCase() : "?";
+        }
+
+        function normalizeUrl(input) {
+            var v = String(input || "").trim();
+            if (!v) return "";
+            if (!/^https?:\/\//i.test(v)) v = "https://" + v;
+            try {
+                return new URL(v).href;
+            } catch (_) {
+                return "";
+            }
+        }
+
+        function render() {
+            grid.innerHTML = "";
+            grid.classList.toggle("is-editing", editing);
+            editToggle.classList.toggle("is-active", editing);
+            editToggle.setAttribute("aria-pressed", editing ? "true" : "false");
+            editToggle.textContent = editing ? "Done" : "Edit";
+
+            apps.forEach(function (app, index) {
+                var tile = document.createElement("a");
+                tile.className = "app-tile";
+                tile.href = app.url;
+                tile.target = "_self";
+                tile.rel = "noopener";
+                tile.setAttribute("aria-label", app.name);
+
+                var icon = document.createElement("span");
+                icon.className = "app-tile-icon";
+                var img = document.createElement("img");
+                img.src = faviconFor(app.url);
+                img.alt = "";
+                img.loading = "lazy";
+                img.decoding = "async";
+                img.onerror = function () {
+                    img.remove();
+                    icon.textContent = initialFor(app.name);
+                };
+                icon.appendChild(img);
+
+                var name = document.createElement("span");
+                name.className = "app-tile-name";
+                name.textContent = app.name;
+
+                tile.appendChild(icon);
+                tile.appendChild(name);
+
+                if (editing) {
+                    var remove = document.createElement("button");
+                    remove.type = "button";
+                    remove.className = "app-tile-remove";
+                    remove.setAttribute("aria-label", "Remove " + app.name);
+                    remove.title = "Remove";
+                    remove.textContent = "×";
+                    remove.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        apps.splice(index, 1);
+                        saveApps();
+                        render();
+                    });
+                    tile.appendChild(remove);
+                    // Prevent navigation while editing.
+                    tile.addEventListener("click", function (e) {
+                        e.preventDefault();
+                    });
+                }
+
+                grid.appendChild(tile);
+            });
+        }
+
+        editToggle.addEventListener("click", function () {
+            editing = !editing;
+            if (editing) {
+                addForm.style.display = "flex";
+            } else {
+                addForm.style.display = "none";
+                addName.value = "";
+                addUrl.value = "";
+            }
+            render();
+        });
+
+        addSave.addEventListener("click", function () {
+            var name = addName.value.trim();
+            var url  = normalizeUrl(addUrl.value);
+            if (!name || !url) {
+                if (!name) addName.focus();
+                else addUrl.focus();
+                return;
+            }
+            apps.push({ name: name, url: url });
+            saveApps();
+            addName.value = "";
+            addUrl.value = "";
+            addName.focus();
+            render();
+        });
+
+        addCancel.addEventListener("click", function () {
+            addName.value = "";
+            addUrl.value = "";
+            editing = false;
+            addForm.style.display = "none";
+            render();
+        });
+
+        // Enter submits the form when both fields are filled.
+        addUrl.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") { e.preventDefault(); addSave.click(); }
+        });
+        addName.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") { e.preventDefault(); addUrl.focus(); }
+        });
+
+        render();
+    })();
+    </script>
+
+    <!-- ======================================================================
+         Search bar wiring
+         ====================================================================== -->
+    <script>
+    (function () {
+        "use strict";
+
+        var form    = document.getElementById("sj-form");
+        var input   = document.getElementById("sj-address");
+        var engine  = document.getElementById("sj-search-engine");
+        var errEl   = document.getElementById("sj-error");
+        var errCode = document.getElementById("sj-error-code");
+        if (!form || !input) return;
+
+        function looksLikeUrl(value) {
+            var v = value.trim();
+            if (!v) return false;
+            if (/^https?:\/\//i.test(v)) return true;
+            // bare domain like example.com / sub.example.co.uk/path
+            if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(v)) return true;
+            // localhost:port
+            if (/^localhost(:\d+)?(\/\S*)?$/i.test(v)) return true;
+            return false;
+        }
+
+        function toUrl(value) {
+            var v = value.trim();
+            if (!/^https?:\/\//i.test(v)) v = "https://" + v;
+            return v;
+        }
+
+        function showError(message, code) {
+            if (errEl) errEl.textContent = message || "";
+            if (errCode) errCode.textContent = code ? String(code) : "";
+        }
+
+        function clearError() {
+            showError("", "");
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            clearError();
+            var v = input.value.trim();
+            if (!v) return;
+
+            var target;
+            if (looksLikeUrl(v)) {
+                target = toUrl(v);
+            } else {
+                var tmpl = (engine && engine.value) || "https://duckduckgo.com/?q=%s";
+                target = tmpl.replace("%s", encodeURIComponent(v));
+            }
+
+            try {
+                // If index.js exposes a proxy navigate helper, use it.
+                if (typeof window.__areoyNavigate === "function") {
+                    window.__areoyNavigate(target);
+                } else {
+                    window.location.href = target;
+                }
+            } catch (err) {
+                showError("Couldn't open that. Try again.", err && err.message);
+            }
+        });
+
+        // Enter should submit even on mobile when the URL field is focused.
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true }));
+            }
+        });
+    })();
+    </script>
+
+    <!-- Your existing apps.js — kept last so DOM is ready -->
+    <script src="apps.js"></script>
+
+</body>
 </html>
