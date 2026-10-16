@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
     <title>Areoy Proxy</title>
 
-    <!-- Favicon (fixed: was `rel="shortcut icon" content="..."` which never loaded) -->
+    <!-- Favicon -->
     <link rel="icon" type="image/webp" href="favicon.webp" />
     <meta name="theme-color" content="#050a08" />
 
@@ -13,7 +13,13 @@
     <script src="/scram/scramjet.all.js"></script>
     <script src="/baremux/index.js"></script>
 
-    <!-- Styles -->
+    <!-- ====================================================================
+         Stylesheets — order matters:
+         1. fern.css          = compiled Tailwind (tokens, reset, utilities, fonts)
+         2. index.css         = your themes, reset, custom controls, landing page
+         3. browser-chrome.css = chrome-only selectors + state hooks
+         ==================================================================== -->
+    <link rel="stylesheet" href="fern.css" />
     <link rel="stylesheet" href="index.css" />
     <link rel="stylesheet" href="browser-chrome.css" />
 
@@ -32,7 +38,7 @@
 <body>
 
     <!-- ======================================================================
-         Boot screen — shown immediately, hidden by window.bootDone()
+         Boot screen — fades out when boot.js calls window.bootDone()
          ====================================================================== -->
     <div id="boot-screen" role="status" aria-live="polite">
         <img src="favicon.webp" alt="" width="64" height="64" class="boot-logo" />
@@ -44,16 +50,10 @@
         </div>
     </div>
 
-    <!-- ======================================================================
-         App mount point (React or whatever index.js renders into)
-         ====================================================================== -->
+    <!-- App mount point (React or whatever index.js renders into) -->
     <div id="root"></div>
 
-    <!-- ======================================================================
-         SEO content — visually hidden but readable to crawlers/screen readers.
-         NOTE: keep this content genuinely available somewhere on the page
-         too, or this is cloaking. See my previous message.
-         ====================================================================== -->
+    <!-- SEO content — visually hidden but readable to crawlers/screen readers -->
     <div id="bqtjye" class="sr-only">
         <h1 id="asdbwy">LinguaPath Lessons</h1>
         <button id="sabyrl" type="button">Start a Lesson</button>
@@ -61,9 +61,7 @@
         <h2>LinguaPath — Learn a New Language One Conversation at a Time</h2>
     </div>
 
-    <!-- ======================================================================
-         Decorative constellation background
-         ====================================================================== -->
+    <!-- Decorative constellation background -->
     <canvas id="constellation-canvas" aria-hidden="true" role="presentation"></canvas>
 
     <!-- ======================================================================
@@ -118,6 +116,65 @@
     </div>
 
     <!-- ======================================================================
+         Browser chrome shell — hidden until browser-chrome.js adds .is-open
+         ====================================================================== -->
+    <div id="browser-chrome" aria-label="Browser">
+
+        <div class="chrome-topbar">
+            <div class="chrome-nav">
+                <button class="chrome-btn" id="chrome-back"    type="button" aria-label="Back"></button>
+                <button class="chrome-btn" id="chrome-forward" type="button" aria-label="Forward"></button>
+                <button class="chrome-btn" id="chrome-reload"  type="button" aria-label="Reload"></button>
+                <button class="chrome-btn" id="chrome-home"    type="button" aria-label="Home"></button>
+            </div>
+
+            <div class="chrome-url-wrap">
+                <svg class="chrome-url-icon" id="chrome-url-icon" viewBox="0 0 24 24" aria-hidden="true"></svg>
+                <input
+                    id="chrome-url"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    enterkeyhint="go"
+                    aria-label="Address"
+                />
+                <button class="chrome-url-action" id="chrome-url-action" type="button" hidden aria-label="Clear"></button>
+            </div>
+
+            <button class="chrome-btn" id="chrome-menu-btn" type="button" aria-label="Menu"></button>
+
+            <div class="chrome-progress" aria-hidden="true">
+                <div class="chrome-progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="chrome-tabs" id="chrome-tabs" role="tablist"></div>
+
+        <div class="chrome-viewport">
+            <div class="chrome-empty" id="chrome-empty">
+                <div class="chrome-empty-title">New tab</div>
+                <div>Type a URL above to get started.</div>
+            </div>
+
+            <div class="chrome-error" id="chrome-error">
+                <div class="chrome-error-title">This page couldn't load</div>
+                <pre class="chrome-error-detail" id="chrome-error-detail"></pre>
+                <button class="chrome-error-retry" id="chrome-error-retry" type="button">Retry</button>
+            </div>
+
+            <div class="chrome-statusbar" id="chrome-statusbar"></div>
+        </div>
+
+        <div class="chrome-menu" id="chrome-menu" hidden>
+            <button class="chrome-menu-item" data-action="newtab">New tab</button>
+            <button class="chrome-menu-item" data-action="reload">Reload</button>
+            <div class="chrome-menu-sep"></div>
+            <button class="chrome-menu-item" data-action="home">Back to Areoy</button>
+            <button class="chrome-menu-item" data-action="close">Close browser</button>
+        </div>
+    </div>
+
+    <!-- ======================================================================
          Constellation background
          ====================================================================== -->
     <script>
@@ -162,11 +219,8 @@
         }
 
         function hexWithAlpha(hex, alpha) {
-            // hex like "#rrggbb" or "#rgb" or "#rrggbbaa"
             var h = hex.replace("#", "");
-            if (h.length === 3) {
-                h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-            }
+            if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
             var r = parseInt(h.slice(0, 2), 16);
             var g = parseInt(h.slice(2, 4), 16);
             var b = parseInt(h.slice(4, 6), 16);
@@ -247,7 +301,6 @@
         }
 
         function renderStatic() {
-            // Reduced-motion: draw one frame, no RAF loop.
             var W = window.innerWidth;
             var H = window.innerHeight;
             ctx.clearRect(0, 0, W, H);
@@ -284,14 +337,13 @@
 
         var STORAGE_KEY = "areoy_quick_apps";
 
-        // Default seed shown on first visit.
         var DEFAULTS = [
-            { name: "Games",    url: "https://poki.com" },
-            { name: "YouTube",  url: "https://youtube.com" },
-            { name: "GitHub",   url: "https://github.com" },
-            { name: "Reddit",   url: "https://reddit.com" },
-            { name: "Discord",  url: "https://discord.com" },
-            { name: "Wikipedia",url: "https://wikipedia.org" }
+            { name: "Games",     url: "https://poki.com" },
+            { name: "YouTube",   url: "https://youtube.com" },
+            { name: "GitHub",    url: "https://github.com" },
+            { name: "Reddit",    url: "https://reddit.com" },
+            { name: "Discord",   url: "https://discord.com" },
+            { name: "Wikipedia", url: "https://wikipedia.org" }
         ];
 
         var grid       = document.getElementById("apps-grid");
@@ -323,7 +375,7 @@
         function saveApps() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
-            } catch (_) { /* quota / disabled storage — ignore */ }
+            } catch (_) {}
         }
 
         function faviconFor(url) {
@@ -345,11 +397,7 @@
             var v = String(input || "").trim();
             if (!v) return "";
             if (!/^https?:\/\//i.test(v)) v = "https://" + v;
-            try {
-                return new URL(v).href;
-            } catch (_) {
-                return "";
-            }
+            try { return new URL(v).href; } catch (_) { return ""; }
         }
 
         function render() {
@@ -402,10 +450,7 @@
                         render();
                     });
                     tile.appendChild(remove);
-                    // Prevent navigation while editing.
-                    tile.addEventListener("click", function (e) {
-                        e.preventDefault();
-                    });
+                    tile.addEventListener("click", function (e) { e.preventDefault(); });
                 }
 
                 grid.appendChild(tile);
@@ -448,7 +493,6 @@
             render();
         });
 
-        // Enter submits the form when both fields are filled.
         addUrl.addEventListener("keydown", function (e) {
             if (e.key === "Enter") { e.preventDefault(); addSave.click(); }
         });
@@ -478,9 +522,7 @@
             var v = value.trim();
             if (!v) return false;
             if (/^https?:\/\//i.test(v)) return true;
-            // bare domain like example.com / sub.example.co.uk/path
             if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(v)) return true;
-            // localhost:port
             if (/^localhost(:\d+)?(\/\S*)?$/i.test(v)) return true;
             return false;
         }
@@ -496,9 +538,7 @@
             if (errCode) errCode.textContent = code ? String(code) : "";
         }
 
-        function clearError() {
-            showError("", "");
-        }
+        function clearError() { showError("", ""); }
 
         form.addEventListener("submit", function (e) {
             e.preventDefault();
@@ -515,7 +555,6 @@
             }
 
             try {
-                // If index.js exposes a proxy navigate helper, use it.
                 if (typeof window.__areoyNavigate === "function") {
                     window.__areoyNavigate(target);
                 } else {
@@ -526,17 +565,18 @@
             }
         });
 
-        // Enter should submit even on mobile when the URL field is focused.
         input.addEventListener("keydown", function (e) {
             if (e.key === "Enter") {
                 e.preventDefault();
-                form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true }));
+                form.requestSubmit
+                    ? form.requestSubmit()
+                    : form.dispatchEvent(new Event("submit", { cancelable: true }));
             }
         });
     })();
     </script>
 
-    <!-- Your existing apps.js — kept last so DOM is ready -->
+    <!-- Your existing apps.js — kept last so any globals it defines are available -->
     <script src="apps.js"></script>
 
 </body>
