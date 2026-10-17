@@ -1,43 +1,106 @@
 /* ==========================================================================
    Areoy Proxy — settings.js
-   Full settings overlay matching the provided screenshots.
+   Full settings overlay with API-based local storage (localStorage + cookies).
    ========================================================================== */
 
 (function () {
     "use strict";
 
+    // ----------------------------------------------------------------------
+    // API Storage Layer (Simulating a Backend)
+    // ----------------------------------------------------------------------
+    var API = {
+        // Caches data to localStorage
+        cache: {
+            set: function (key, value) {
+                try {
+                    localStorage.setItem("areoy_settings_" + key, JSON.stringify(value));
+                } catch (e) {
+                    console.error("Cache write failed", e);
+                }
+            },
+            get: function (key, fallback) {
+                try {
+                    var raw = localStorage.getItem("areoy_settings_" + key);
+                    return raw ? JSON.parse(raw) : fallback;
+                } catch (e) {
+                    return fallback;
+                }
+            }
+        },
+        // Persists critical identity data to Cookies
+        cookies: {
+            set: function (name, value, days) {
+                var expires = "";
+                if (days) {
+                    var date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    expires = "; expires=" + date.toUTCString();
+                }
+                document.cookie = "areoy_" + name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+            },
+            get: function (name) {
+                var nameEQ = "areoy_" + name + "=";
+                var ca = document.cookie.split(';');
+                for (var i = 0; i < ca.length; i++) {
+                    var c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                }
+                return null;
+            }
+        },
+        // Mock API Call to get all settings
+        getSettings: function () {
+            var defaults = {
+                theme: "dark",
+                accentColor: "#ff6b4a",
+                searchEngine: "https://search.brave.com/search?q=%s",
+                userAgent: "default"
+            };
+            
+            var stored = API.cache.get("all", null);
+            if (stored) return Object.assign({}, defaults, stored);
+            
+            // Fallback: try to rebuild from individual cookies if cache is cleared
+            var theme = API.cookies.get("theme") || defaults.theme;
+            var accent = API.cookies.get("accent") || defaults.accentColor;
+            
+            return Object.assign({}, defaults, { theme: theme, accentColor: accent });
+        },
+        // Mock API Call to save a setting
+        saveSetting: function (key, value) {
+            // 1. Save to primary Cache
+            var current = API.cache.get("all", {});
+            current[key] = value;
+            API.cache.set("all", current);
+
+            // 2. Save to Cookies for redundancy (like a server-side session)
+            if (key === "theme" || key === "accentColor" || key === "userAgent") {
+                API.cookies.set(key, value, 30); // 30 day expiry
+            }
+        }
+    };
+
+
+    // ----------------------------------------------------------------------
+    // DOM Elements
+    // ----------------------------------------------------------------------
     var panel   = document.getElementById("settings-panel");
-    var nav     = document.getElementById("settings-nav");
+    var nav     = document.getElementById("settings-nav-list");
     var content = document.getElementById("settings-content");
     var closeX  = document.getElementById("settings-close");
-    var fab     = document.getElementById("settings-fab");
 
     if (!panel || !nav || !content) return;
 
     // ----------------------------------------------------------------------
-    // Settings State Manager
+    // State Management
     // ----------------------------------------------------------------------
-    var DEFAULT_SETTINGS = {
-        theme: "dark",
-        accentColor: "#ff6b4a",
-        searchEngine: "https://search.brave.com/search?q=%s",
-        userAgent: "default"
-    };
+    var settings = API.getSettings();
 
-    var settings = loadSettings();
-
-    function loadSettings() {
-        try {
-            var raw = localStorage.getItem("areoy_settings");
-            return raw ? Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw)) : DEFAULT_SETTINGS;
-        } catch (_) {
-            return DEFAULT_SETTINGS;
-        }
-    }
-
-    function saveSettings(key, value) {
+    function saveSetting(key, value) {
         settings[key] = value;
-        try { localStorage.setItem("areoy_settings", JSON.stringify(settings)); } catch (_) {}
+        API.saveSetting(key, value);
         applySettings();
     }
 
@@ -52,7 +115,7 @@
         
         // 2. Accent Color
         document.documentElement.style.setProperty('--accent-color', settings.accentColor);
-        document.documentElement.style.setProperty('--accent-glow', settings.accentColor + '26'); // Add 15% opacity hex
+        document.documentElement.style.setProperty('--accent-glow', settings.accentColor + '26');
 
         // 3. Search Engine
         var searchInput = document.getElementById("sj-search-engine");
@@ -62,10 +125,11 @@
         window.__areoyUserAgent = settings.userAgent;
     }
 
+    // Apply immediately on load
     applySettings();
 
     // ----------------------------------------------------------------------
-    // SVG Icons (Uncolored)
+    // SVG Icons
     // ----------------------------------------------------------------------
     var ICONS = {
         search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
@@ -103,49 +167,25 @@
     // ----------------------------------------------------------------------
     function escapeHtml(s) {
         return String(s == null ? "" : s)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     // ----------------------------------------------------------------------
-    // Navigation Sidebar
+    // Navigation & Routing
     // ----------------------------------------------------------------------
     function renderNav(activeId) {
         nav.innerHTML = "";
-        
-        // Search Bar
-        var searchWrap = document.createElement("div");
-        searchWrap.className = "settings-search-wrap";
-        searchWrap.innerHTML = ICONS.search + '<input type="text" placeholder="Search settings" id="settings-search-input">';
-        nav.appendChild(searchWrap);
-        
-        var navList = document.createElement("div");
-        navList.className = "settings-nav-list";
-        
         TABS.forEach(function (t) {
             var b = document.createElement("button");
             b.type = "button";
             b.className = "settings-nav-item" + (t.id === activeId ? " is-active" : "");
             b.innerHTML = '<span class="settings-nav-icon">' + t.icon + '</span><span>' + t.label + '</span>';
             b.addEventListener("click", function () { showPanel(t.id); });
-            navList.appendChild(b);
+            nav.appendChild(b);
         });
-        
-        nav.appendChild(navList);
-        
-        // Footer Info
-        var footer = document.createElement("div");
-        footer.className = "settings-footer";
-        footer.innerHTML = '<div>Fern v2.0</div><div>19d8bcd</div>';
-        nav.appendChild(footer);
     }
 
-    // ----------------------------------------------------------------------
-    // Panel Router
-    // ----------------------------------------------------------------------
     function showPanel(id) {
         renderNav(id);
         content.innerHTML = "";
@@ -155,7 +195,7 @@
         if (id === "proxy")      return renderProxy();
         if (id === "credits")    return renderCredits();
         
-        // Placeholder for other tabs
+        // Placeholder
         var h = document.createElement("h2");
         h.className = "settings-h2";
         h.textContent = id.charAt(0).toUpperCase() + id.slice(1);
@@ -167,7 +207,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // Tab: Appearance
+    // Panel: Appearance
     // ----------------------------------------------------------------------
     function renderAppearance() {
         var header = document.createElement("div");
@@ -231,87 +271,12 @@
         });
         document.getElementById("theme-grid").innerHTML = themeHtml;
 
-        // Custom Theme Card
-        var customGroup = document.createElement("div");
-        customGroup.className = "settings-card";
-        customGroup.innerHTML = `
-            <h3 class="settings-card-title">Custom theme</h3>
-            <p class="settings-card-desc">A palette of your own, built from one color.</p>
-            <div class="settings-toggle-group" style="margin-top: 15px;">
-                <button class="settings-toggle-btn is-active">Dark</button>
-                <button class="settings-toggle-btn">Light</button>
-            </div>
-            <div class="settings-row" style="padding: 15px 0 0 0; background: transparent; border-bottom: none;">
-                <span class="settings-row-title">Accent color</span>
-                <span class="theme-circle" style="background-color: ${settings.accentColor};"></span>
-            </div>
-            <p class="settings-card-desc" style="margin-bottom: 20px;">The rest of the palette is generated from this color.</p>
-            <details class="settings-advanced">
-                <summary>Advanced: edit every variable</summary>
-                <div class="settings-var-list">
-                    ${["Background", "Background (elevated 1)", "Background (elevated 2)", "Background (elevated 3)", "Background (elevated 4)", "Accent", "Accent (secondary)", "Accent glow", "Text", "Muted text", "Bright text", "Border", "Border (2)", "Border (3)", "Border (4)"].map(name => `
-                        <div class="settings-var-row">
-                            <span>${name}</span>
-                            <span class="theme-circle ${name === 'Accent' || name === 'Accent glow' ? 'accent-circle' : ''}"></span>
-                        </div>
-                    `).join('')}
-                </div>
-            </details>
-        `;
-        content.appendChild(customGroup);
-
-        // Glass & New Tab Toggles
-        var glassGroup = document.createElement("div");
-        glassGroup.className = "settings-card";
-        glassGroup.innerHTML = `
-            <h3 class="settings-card-title">Glass</h3>
-            <div class="settings-row" style="background: transparent; padding: 0; margin-bottom: 15px;">
-                <span><span class="settings-row-title">Glass mode</span><span class="settings-row-desc">Makes the current theme translucent so your wallpaper shows through the whole browser.</span></span>
-                <label class="settings-switch"><input type="checkbox"><span class="slider"></span></label>
-            </div>
-        `;
-        content.appendChild(glassGroup);
-
-        var newTabGroup = document.createElement("div");
-        newTabGroup.className = "settings-card";
-        newTabGroup.innerHTML = `
-            <h3 class="settings-card-title">New tab</h3>
-            <div class="settings-row" style="background: transparent; padding: 0; margin-bottom: 15px;">
-                <span class="settings-row-title">Show shortcuts</span>
-                <label class="settings-switch"><input type="checkbox" checked><span class="slider"></span></label>
-            </div>
-            <div class="settings-row" style="background: transparent; padding: 0; margin-bottom: 15px; align-items: flex-start;">
-                <span><span class="settings-row-title">Background</span><span class="settings-row-desc">Shown behind the New Tab page — and behind the whole browser when glass mode is on.</span></span>
-                <div class="settings-toggle-group" style="width: 260px;">
-                    <button class="settings-toggle-btn is-active">None</button>
-                    <button class="settings-toggle-btn">Color</button>
-                    <button class="settings-toggle-btn">Image</button>
-                </div>
-            </div>
-        `;
-        content.appendChild(newTabGroup);
-
-        // Font settings
-        var fontGroup = document.createElement("div");
-        fontGroup.className = "settings-card";
-        fontGroup.innerHTML = `
-            <h3 class="settings-card-title">Font</h3>
-            <div class="settings-row" style="background: transparent; padding: 0; margin-bottom: 15px;">
-                <span><span class="settings-row-title">Family</span><span class="settings-row-desc">A bundled family, or any name from fonts.google.com</span></span>
-                <input type="text" class="settings-input" value="Default">
-            </div>
-            <div class="settings-pill-grid">
-                ${["SF Compact Text", "Adwaita Sans", "Inter", "gg sans", "Netflix Sans", "Helvetica Neue", "Roboto", "Poppins", "JetBrains Mono", "Space Grotesk", "DM Sans", "Fira Code", "IBM Plex Sans"].map(f => `<button class="settings-pill">${f}</button>`).join('')}
-            </div>
-        `;
-        content.appendChild(fontGroup);
-
         // Bind Events
         document.querySelectorAll(".settings-color-btn").forEach(btn => {
             btn.addEventListener("click", function() {
                 document.querySelectorAll(".settings-color-btn").forEach(b => b.classList.remove("is-active"));
                 this.classList.add("is-active");
-                saveSettings("accentColor", this.getAttribute("data-color"));
+                saveSetting("accentColor", this.getAttribute("data-color"));
             });
         });
 
@@ -319,20 +284,19 @@
             btn.addEventListener("click", function() {
                 document.querySelectorAll(".settings-theme-btn").forEach(b => b.classList.remove("is-active"));
                 this.classList.add("is-active");
-                saveSettings("theme", this.getAttribute("data-theme") === "light" ? "light" : "dark");
+                saveSetting("theme", this.getAttribute("data-theme") === "light" ? "light" : "dark");
             });
         });
     }
 
     // ----------------------------------------------------------------------
-    // Tab: Search
+    // Panel: Search
     // ----------------------------------------------------------------------
     function renderSearch() {
         var header = document.createElement("div");
         header.innerHTML = '<h2 class="settings-h2">Search</h2>';
         content.appendChild(header);
 
-        // Search Engine Group
         var group = document.createElement("div");
         group.className = "settings-card";
         group.innerHTML = `
@@ -369,7 +333,6 @@
         });
         document.getElementById("search-grid").innerHTML = searchHtml;
 
-        // Preview Card
         var preview = document.createElement("div");
         preview.className = "settings-card";
         preview.innerHTML = `
@@ -378,7 +341,6 @@
         `;
         content.appendChild(preview);
 
-        // Bind Events
         document.querySelectorAll(".settings-search-btn").forEach(btn => {
             btn.addEventListener("click", function() {
                 document.querySelectorAll(".settings-search-btn").forEach(b => b.classList.remove("is-active"));
@@ -386,7 +348,7 @@
                 
                 var url = this.getAttribute("data-url");
                 if (url !== "custom") {
-                    saveSettings("searchEngine", url);
+                    saveSetting("searchEngine", url);
                     document.getElementById("search-preview").value = url.replace('%s', 'hello%20world');
                     
                     document.querySelectorAll(".search-btn-check").forEach(c => c.innerHTML = '');
@@ -401,7 +363,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // Tab: Proxy (User Agent)
+    // Panel: Proxy
     // ----------------------------------------------------------------------
     function renderProxy() {
         var header = document.createElement("div");
@@ -462,7 +424,7 @@
                 btn.addEventListener("click", function() {
                     document.querySelectorAll("[data-id]").forEach(b => b.classList.remove("is-active"));
                     this.classList.add("is-active");
-                    saveSettings("userAgent", this.getAttribute("data-id"));
+                    saveSetting("userAgent", this.getAttribute("data-id"));
                 });
             });
         }
@@ -470,7 +432,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // Tab: Credits
+    // Panel: Credits
     // ----------------------------------------------------------------------
     function renderCredits() {
         var header = document.createElement("div");
@@ -512,7 +474,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // Open / close
+    // Open / Close
     // ----------------------------------------------------------------------
     function openSettings() {
         panel.hidden = false;
@@ -527,7 +489,6 @@
     window.areoyCloseSettings = closeSettings;
 
     if (closeX) closeX.addEventListener("click", closeSettings);
-    if (fab)    fab.addEventListener("click", openSettings);
 
     document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && !panel.hidden) closeSettings();
