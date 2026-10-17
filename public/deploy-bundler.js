@@ -1,6 +1,6 @@
 /* ==========================================================================
    Areoy Proxy — Deploy Bundler Loader
-   Registers the Service Worker that intercepts and rebundles all requests.
+   Handles both standard HTML and SVG-wrapped HTML.
    ========================================================================== */
 
 (function () {
@@ -11,10 +11,11 @@
                       window.location.protocol === "file:";
 
     if (isLocalhost) {
-        console.log("[Bundler] Local environment detected. Using normal paths.");
+        console.log("[Bundler] Local environment detected.");
         return; 
     }
 
+    // Register the SW
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('/bundler-sw.js', { scope: '/' })
@@ -27,14 +28,19 @@
         });
     }
 
+    // Intercept paths for both HTML and SVG DOMs
     function rewriteTags() {
-        var links = document.querySelectorAll("link[rel='stylesheet']");
+        // Handle both standard documents and SVG foreignObject documents
+        var doc = document;
+        var root = document.querySelector("foreignObject") ? document.querySelector("foreignObject").firstElementChild : document;
+        
+        var links = root.querySelectorAll("link[rel='stylesheet']");
         links.forEach(function(link) {
             var href = link.getAttribute("href");
             if (href) link.setAttribute("href", getBundledPath(href));
         });
 
-        var scripts = document.querySelectorAll("script[src]");
+        var scripts = root.querySelectorAll("script[src]");
         scripts.forEach(function(script) {
             var src = script.getAttribute("src");
             if (src) {
@@ -68,6 +74,7 @@
         return "./assets/bundle-" + hash + "." + ext;
     }
 
+    // Use DOMContentLoaded or immediate execution if DOM is ready
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", rewriteTags);
     } else {
