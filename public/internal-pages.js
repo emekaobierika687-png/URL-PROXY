@@ -97,4 +97,141 @@
     if (launcherBackBtn) launcherBackBtn.addEventListener("click", function() { window.areoyRenderGamesPage(); });
     if (launcherReloadBtn) launcherReloadBtn.addEventListener("click", function() { if (launcherFrame && launcherFrame.src) launcherFrame.src = launcherFrame.src; });
     if (launcherFullscreenBtn) launcherFullscreenBtn.addEventListener("click", function() { if (launcherFrame.requestFullscreen) launcherFrame.requestFullscreen(); });
-    if (launcherFavBtn) launcherFavBtn.addEventListener("click", function() { this.style.color = this.style.color === 'var(--
+    if (launcherFavBtn) launcherFavBtn.addEventListener("click", function() { this.style.color = this.style.color === 'var(--accent-color)' ? '#ddd' : 'var(--accent-color)'; });
+
+    // ----------------------------------------------------------------------
+    // MUSIC LOGIC
+    // ----------------------------------------------------------------------
+    var musicContent = document.getElementById("music-content");
+    var musicSearch = document.getElementById("music-search");
+
+    async function fetchMusic(query) {
+        if (!musicContent) return;
+        musicContent.innerHTML = '<div style="color:#888; margin-top:20px;">Searching...</div>';
+        try {
+            var url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=24`;
+            var res = await fetch(url);
+            var data = await res.json();
+            if (!data.results || data.results.length === 0) {
+                musicContent.innerHTML = '<div style="color:#888; margin-top:20px;">No results found.</div>';
+                return;
+            }
+            var html = `<div class="music-section-title-main">Search Results: "${query}"</div><div class="music-grid">`;
+            data.results.forEach(function(track) {
+                var artwork = track.artworkUrl100 ? track.artworkUrl100.replace("100x100bb", "500x500bb") : "";
+                html += `<div class="music-card" onclick="window.open('${track.trackViewUrl}', '_blank')"><img src="${artwork}" class="music-card-img" alt="Album Art" loading="lazy"><div class="music-card-title">${track.trackName}</div><div class="music-card-artist">${track.artistName}</div></div>`;
+            });
+            html += `</div>`;
+            musicContent.innerHTML = html;
+        } catch (e) {
+            musicContent.innerHTML = '<div style="color:#888; margin-top:20px;">Error loading music.</div>';
+        }
+    }
+
+    if (musicSearch) {
+        var searchTimeout;
+        musicSearch.addEventListener("input", function() {
+            clearTimeout(searchTimeout);
+            var val = this.value.trim();
+            if (val.length === 0) { fetchMusic("Top Hits"); return; }
+            searchTimeout = setTimeout(function() { fetchMusic(val); }, 500);
+        });
+    }
+
+    window.areoyRenderMusicPage = function() {
+        hideAllInternalPages();
+        document.getElementById("areoy-music-page").hidden = false;
+        fetchMusic("Top Hits");
+    };
+
+    // ----------------------------------------------------------------------
+    // AI LOGIC
+    // ----------------------------------------------------------------------
+    var GROQ_API_KEY = "gsk_YOUR_GROQ_API_KEY_HERE"; 
+    var GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+    var aiInput = document.getElementById("ai-input");
+    var aiSend = document.getElementById("ai-send-btn");
+    var aiChatContainer = document.getElementById("ai-chat-container");
+    var aiWelcome = document.getElementById("ai-welcome");
+    var chatHistory = [{ role: "system", content: "You are Fern AI, a helpful assistant built into the Areoy browser. Be concise and helpful." }];
+
+    function appendMessage(role, text) {
+        var msgDiv = document.createElement("div");
+        msgDiv.className = "ai-message " + role;
+        msgDiv.innerHTML = `<div class="ai-avatar"></div><div class="ai-msg-content">${text.replace(/\n/g, '<br>')}</div>`;
+        aiChatContainer.appendChild(msgDiv);
+        aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
+    }
+
+    async function sendMessage() {
+        var text = aiInput.value.trim();
+        if (!text) return;
+        if (aiWelcome) aiWelcome.style.display = "none";
+        appendMessage("user", text);
+        chatHistory.push({ role: "user", content: text });
+        aiInput.value = "";
+
+        var loadingDiv = document.createElement("div");
+        loadingDiv.className = "ai-message ai";
+        loadingDiv.innerHTML = `<div class="ai-avatar"></div><div class="ai-msg-content" style="color: #888;">Thinking...</div>`;
+        aiChatContainer.appendChild(loadingDiv);
+        aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
+
+        try {
+            var response = await fetch(GROQ_API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+                body: JSON.stringify({ model: "llama3-8b-8192", messages: chatHistory, temperature: 0.7 })
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            var data = await response.json();
+            var aiText = data.choices[0].message.content;
+            if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+            appendMessage("ai", aiText);
+            chatHistory.push({ role: "assistant", content: aiText });
+        } catch (error) {
+            if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+            appendMessage("ai", "Sorry, I encountered an error. Make sure your API key is valid and you are online.");
+        }
+    }
+
+    if (aiSend && aiInput) {
+        aiSend.addEventListener("click", sendMessage);
+        aiInput.addEventListener("keydown", function(e) { if (e.key === "Enter") sendMessage(); });
+        document.querySelectorAll(".ai-suggestion").forEach(function(btn) {
+            btn.addEventListener("click", function() { aiInput.value = this.textContent.trim(); sendMessage(); });
+        });
+        var clearBtn = document.querySelector(".ai-clear-btn");
+        if (clearBtn) {
+            clearBtn.addEventListener("click", function() {
+                chatHistory = [{ role: "system", content: "You are Fern AI, a helpful assistant built into the Areoy browser. Be concise and helpful." }];
+                aiChatContainer.innerHTML = "";
+                if (aiWelcome) aiWelcome.style.display = "block";
+            });
+        }
+    }
+
+    window.areoyRenderAIPage = function() {
+        hideAllInternalPages();
+        document.getElementById("areoy-ai-page").hidden = false;
+    };
+
+    // ----------------------------------------------------------------------
+    // ROUTING HELPERS
+    // ----------------------------------------------------------------------
+    function hideAllInternalPages() {
+        var pages = ["areoy-games-page", "areoy-launcher-page", "areoy-music-page", "areoy-ai-page"];
+        pages.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.hidden = true;
+        });
+    }
+
+    window.addEventListener("hashchange", function() {
+        if (window.location.hash === "#areoy://music") window.areoyRenderMusicPage();
+        if (window.location.hash === "#areoy://ai") window.areoyRenderAIPage();
+        if (window.location.hash === "#areoy://games") window.areoyRenderGamesPage();
+    });
+
+})();
