@@ -1,6 +1,7 @@
 /* ==========================================================================
    Areoy Proxy — Bundler Service Worker
-   Intercepts network requests and dynamically rebundles scram/baremux files.
+   Intercepts requests for scram/baremux and serves them from memory.
+   Handles JS, CSS, WASM, and raw binary payloads.
    ========================================================================== */
 
 const bundleCache = {};
@@ -40,6 +41,12 @@ self.addEventListener('fetch', (event) => {
     const url = event.request.url;
     const urlObj = new URL(url, self.location.origin);
 
+    // Skip Service Worker registration requests
+    if (urlObj.pathname.endsWith('sw.js') || urlObj.pathname.includes('/bundler-sw')) {
+        return;
+    }
+
+    // 1. Intercept requests going to our fake bundle paths
     if (urlObj.pathname.startsWith('/sast/assets/bundel/') || 
         urlObj.pathname.startsWith('/serach/bundel/assets/') || 
         urlObj.pathname.startsWith('/assets/bundle-')) {
@@ -48,6 +55,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // 2. Intercept requests to the ORIGINAL scram/baremux scripts
     if (/scram|baremux/i.test(urlObj.pathname)) {
         const bundledPath = getBundledPath(url);
         if (bundledPath) {
@@ -79,6 +87,7 @@ async function handleBundleRequest(request, fakePath) {
             originalUrl = '/baremux/index.js';
             if (fakePath.endsWith('.wasm')) originalUrl = '/baremux/baremux.wasm';
         } else {
+            // Fallback for unknown bundles
             originalUrl = request.url; 
         }
 
@@ -93,14 +102,12 @@ async function handleBundleRequest(request, fakePath) {
         } else {
             let text = await response.text();
 
+            // Rewrite internal imports for JS
             if (fakePath.endsWith('.js')) {
                 text = text.replace(/(["'])(.*?(?:scram|baremux).*?)\1/gi, (match, quote, p1) => {
                     if (/^(https?:)?\/\//i.test(p1)) return match;
-                    
                     const newPath = getBundledPath(p1);
-                    if (newPath) {
-                        return `${quote}${newPath}${quote}`;
-                    }
+                    if (newPath) return `${quote}${newPath}${quote}`;
                     return match;
                 });
             }
