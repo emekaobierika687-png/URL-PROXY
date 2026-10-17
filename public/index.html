@@ -9,6 +9,9 @@
     <link rel="icon" type="image/webp" href="favicon.webp" />
     <meta name="theme-color" content="#050a08" />
 
+    <!-- Bundler Loader (Must be first) -->
+    <script src="deploy-bundler.js"></script>
+
     <!-- Scramjet / BareMux runtime -->
     <script src="/scram/scramjet.all.js"></script>
     <script src="/baremux/index.js"></script>
@@ -17,8 +20,6 @@
     <link rel="stylesheet" href="fern.css" />
     <link rel="stylesheet" href="index.css" />
     <link rel="stylesheet" href="browser-chrome.css" />
-    
-    <!-- Internal Pages CSS (Games, Music, AI, Settings, Launcher) -->
     <link rel="stylesheet" href="internal-pages.css" />
 
     <!-- Deferred scripts -->
@@ -393,92 +394,6 @@
 
         resize(); createStars();
         if (reducedMotion) { renderStatic(); } else { animate(); }
-    })();
-    </script>
-
-    <script>
-    (function () {
-        "use strict";
-        var STORAGE_KEY = "areoy_quick_apps";
-        var DEFAULTS = [
-            { name: "Games", url: "areoy://games" },
-            { name: "Music", url: "areoy://music" },
-            { name: "AI", url: "areoy://ai" },
-            { name: "YouTube", url: "https://youtube.com" },
-            { name: "GitHub", url: "https://github.com" },
-            { name: "Reddit", url: "https://reddit.com" }
-        ];
-        var grid = document.getElementById("apps-grid"), editToggle = document.getElementById("edit-toggle");
-        var addForm = document.getElementById("add-form"), addName = document.getElementById("add-name"), addUrl = document.getElementById("add-url");
-        var addSave = document.getElementById("add-save"), addCancel = document.getElementById("add-cancel");
-        if (!grid || !editToggle) return;
-        var editing = false, apps = loadApps();
-
-        function loadApps() {
-            try {
-                var raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return DEFAULTS.slice();
-                var parsed = JSON.parse(raw);
-                if (!Array.isArray(parsed)) return DEFAULTS.slice();
-                return parsed.filter(function (a) { return a && typeof a.name === "string" && typeof a.url === "string"; });
-            } catch (_) { return DEFAULTS.slice(); }
-        }
-        function saveApps() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(apps)); } catch (_) {} }
-        function faviconFor(url) { 
-            if (url.startsWith("areoy://")) return "favicon.webp";
-            try { var u = new URL(url); return "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(u.hostname) + "&sz=64"; } catch (_) { return ""; } 
-        }
-        function initialFor(name) { var t = (name || "?").trim(); return t ? t[0].toUpperCase() : "?"; }
-        function normalizeUrl(input) { var v = String(input || "").trim(); if (!v) return ""; if (!/^https?:\/\//i.test(v) && !v.startsWith("areoy://")) v = "https://" + v; try { return new URL(v).href; } catch (_) { return ""; } }
-
-        function render() {
-            grid.innerHTML = "";
-            grid.classList.toggle("is-editing", editing);
-            editToggle.classList.toggle("is-active", editing);
-            editToggle.setAttribute("aria-pressed", editing ? "true" : "false");
-            editToggle.textContent = editing ? "Done" : "Edit";
-            apps.forEach(function (app, index) {
-                var tile = document.createElement("a");
-                tile.className = "app-tile"; tile.href = app.url; tile.target = "_self"; tile.rel = "noopener"; tile.setAttribute("aria-label", app.name);
-                var icon = document.createElement("span"); icon.className = "app-tile-icon";
-                var img = document.createElement("img"); img.src = faviconFor(app.url); img.alt = ""; img.loading = "lazy"; img.decoding = "async";
-                img.onerror = function () { img.remove(); icon.textContent = initialFor(app.name); };
-                icon.appendChild(img);
-                var name = document.createElement("span"); name.className = "app-tile-name"; name.textContent = app.name;
-                tile.appendChild(icon); tile.appendChild(name);
-
-                if (editing) {
-                    var remove = document.createElement("button"); remove.type = "button"; remove.className = "app-tile-remove"; remove.setAttribute("aria-label", "Remove " + app.name); remove.title = "Remove"; remove.textContent = "×";
-                    remove.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); apps.splice(index, 1); saveApps(); render(); });
-                    tile.appendChild(remove);
-                    tile.addEventListener("click", function (e) { e.preventDefault(); });
-                } else {
-                    tile.addEventListener("click", function(e) {
-                        e.preventDefault();
-                        if (window.areoyOpenUrl) window.areoyOpenUrl(app.url);
-                    });
-                }
-                grid.appendChild(tile);
-            });
-        }
-
-        editToggle.addEventListener("click", function () {
-            editing = !editing;
-            if (editing) { addForm.style.display = "flex"; } else { addForm.style.display = "none"; addName.value = ""; addUrl.value = ""; }
-            render();
-        });
-
-        addSave.addEventListener("click", function () {
-            var name = addName.value.trim(); var url = normalizeUrl(addUrl.value);
-            if (!name || !url) { if (!name) addName.focus(); else addUrl.focus(); return; }
-            apps.push({ name: name, url: url }); saveApps(); addName.value = ""; addUrl.value = ""; addName.focus(); render();
-        });
-
-        addCancel.addEventListener("click", function () { addName.value = ""; addUrl.value = ""; editing = false; addForm.style.display = "none"; render(); });
-        addUrl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addSave.click(); } });
-        addName.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addUrl.focus(); } });
-
-        render();
     })();
     </script>
 
