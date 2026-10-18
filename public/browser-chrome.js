@@ -142,6 +142,9 @@
     function closeChrome() {
         chrome.classList.remove("is-open");
         document.body.classList.remove("chrome-open");
+        
+        // Hide all internal pages when chrome closes
+        hideAllInternalPages();
     }
     window.areoyCloseChrome = closeChrome;
 
@@ -172,6 +175,10 @@
         if (!urlIcon) return;
         urlIcon.classList.remove("is-secure", "is-insecure");
         if (!url) { urlIcon.innerHTML = ICONS.globe; return; }
+        
+        // If it's an areoy:// url, show globe
+        if (url.startsWith("areoy://")) { urlIcon.innerHTML = ICONS.globe; return; }
+        
         if (/^https:\/\//i.test(url)) {
             urlIcon.innerHTML = ICONS.lock;
             urlIcon.classList.add("is-secure");
@@ -211,6 +218,22 @@
         } else {
             statusbar.classList.remove("is-visible");
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // Internal Pages Helpers
+    // ----------------------------------------------------------------------
+    function hideAllInternalPages() {
+        var pages = [
+            "areoy-games-page", 
+            "areoy-launcher-page", 
+            "areoy-music-page", 
+            "areoy-ai-page"
+        ];
+        pages.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.hidden = true;
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -316,6 +339,9 @@
         updateUrlIcon(url);
         if (urlInput && tab.id === activeId) urlInput.value = url;
 
+        // Hide all internal pages by default when navigating
+        hideAllInternalPages();
+
         if (url === "about:newtab") {
             if (tab.iframe) tab.iframe.remove(), tab.iframe = null;
             if (emptyEl) emptyEl.style.display = "";
@@ -332,7 +358,32 @@
         hideError();
         setLoading(true, true);
 
+        // Check for areoy:// protocol
+        if (url.startsWith("areoy://")) {
+            if (tab.iframe) tab.iframe.hidden = true;
+            
+            var host = url.replace("areoy://", "").split("/")[0];
+            
+            if (host === "games") {
+                if (window.areoyRenderGamesPage) window.areoyRenderGamesPage();
+            } else if (host === "music") {
+                if (window.areoyRenderMusicPage) window.areoyRenderMusicPage();
+            } else if (host === "ai") {
+                if (window.areoyRenderAIPage) window.areoyRenderAIPage();
+            } else if (host === "launcher") {
+                if (window.areoyRenderLauncherPage) window.areoyRenderLauncherPage(url);
+            }
+            
+            tab.loading = false;
+            setLoading(false);
+            renderTabs();
+            updateNavButtons();
+            return;
+        }
+
+        // Normal URL navigation
         if (!tab.iframe) createFrame(tab);
+        else tab.iframe.hidden = false;
 
         // Use the proxied navigate helper if index.js provides one;
         // otherwise set src directly.
@@ -364,7 +415,11 @@
     // ----------------------------------------------------------------------
     function openUrl(url, opts) {
         opts = opts || {};
-        url = normalizeUrl(url) || url;
+        
+        // Do not normalize areoy:// URLs
+        if (!url.startsWith("areoy://")) {
+            url = normalizeUrl(url) || url;
+        }
 
         openChrome();
 
@@ -401,7 +456,18 @@
             if (t.iframe) t.iframe.hidden = (t.id !== id);
         });
 
-        if (emptyEl) emptyEl.style.display = tab.url === "about:newtab" ? "" : "none";
+        // If it's an internal page, re-render it
+        if (tab.url.startsWith("areoy://")) {
+            var host = tab.url.replace("areoy://", "").split("/")[0];
+            if (host === "games" && window.areoyRenderGamesPage) window.areoyRenderGamesPage();
+            else if (host === "music" && window.areoyRenderMusicPage) window.areoyRenderMusicPage();
+            else if (host === "ai" && window.areoyRenderAIPage) window.areoyRenderAIPage();
+            else if (host === "launcher" && window.areoyRenderLauncherPage) window.areoyRenderLauncherPage(tab.url);
+        } else {
+            hideAllInternalPages();
+            if (emptyEl) emptyEl.style.display = tab.url === "about:newtab" ? "" : "none";
+        }
+
         if (urlInput) urlInput.value = tab.url === "about:newtab" ? "" : tab.url;
         updateUrlIcon(tab.url === "about:newtab" ? "" : tab.url);
         updateNavButtons();
@@ -448,6 +514,12 @@
     reloadBtn.addEventListener("click", function () {
         var tab = activeTab();
         if (!tab) return;
+        
+        if (tab.url.startsWith("areoy://")) {
+            navigateTo(tab, tab.url, false);
+            return;
+        }
+
         if (tab.url && tab.url !== "about:newtab" && tab.iframe) {
             tab.loading = true;
             updateNavButtons();
@@ -479,7 +551,9 @@
         if (!raw) return;
 
         var target;
-        if (looksLikeUrl(raw)) {
+        if (raw.startsWith("areoy://")) {
+            target = raw;
+        } else if (looksLikeUrl(raw)) {
             target = normalizeUrl(raw);
         } else {
             target = searchTemplate().replace("%s", encodeURIComponent(raw));
@@ -567,9 +641,6 @@
     // ----------------------------------------------------------------------
     // Status bar on link hover inside the iframe
     // ----------------------------------------------------------------------
-    // The landing search form and quick-apps tiles call areoyOpenUrl directly.
-    // The proxied iframe's internal link hovers are handled by the service
-    // worker and postMessage (see postMessage listener below).
     window.addEventListener("message", function (e) {
         var data = e.data;
         if (!data || typeof data !== "object") return;
