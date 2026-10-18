@@ -12,12 +12,10 @@ import { scramjetPath } from "@mercuryworkshop/scramjet/path";
 import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
 
-/* -------------------- PATH FIX -------------------- */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, "../public");
 
-/* -------------------- WISP CONFIG -------------------- */
 logging.set_level(logging.NONE);
 
 Object.assign(wisp.options, {
@@ -26,7 +24,6 @@ Object.assign(wisp.options, {
     dns_servers: ["1.1.1.3", "1.0.0.3"],
 });
 
-/* -------------------- FASTIFY SERVER -------------------- */
 const fastify = Fastify({
     serverFactory: (handler) => {
         return createServer()
@@ -45,12 +42,8 @@ const fastify = Fastify({
     },
 });
 
-/* ==========================================================================
-   API ROUTES
-   ========================================================================== */
-
 // --- TMDB API ---
-const TMDB_API_KEY = process.env.TMDB_API_KEY || 'YOUR_TMDB_API_KEY_HERE';
+const TMDB_API_KEY = process.env.TMDB_API_KEY || '2cf41252de096a2e6c40afce58d8b2ca'; // <-- Inserted your key
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 async function fetchTMDB(endpoint) {
@@ -92,17 +85,14 @@ fastify.get("/api/tmdb/search", async (req, reply) => {
 });
 
 // --- AI (Groq) API with Vision ---
-const GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_YOUR_GROQ_API_KEY_HERE';
+const GROQ_API_KEY = "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"; // <-- Your Groq key
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 fastify.post("/api/ai/chat", async (req, reply) => {
     const { messages, image } = req.body;
-    
     if (!messages) return reply.status(400).send({ error: "Missing messages" });
 
     let finalMessages = [...messages];
-    
-    // If an image is provided, structure it for the Vision model
     if (image) {
         const lastMsg = finalMessages.pop();
         finalMessages.push({
@@ -122,7 +112,7 @@ fastify.post("/api/ai/chat", async (req, reply) => {
                 "Authorization": `Bearer ${GROQ_API_KEY}` 
             },
             body: JSON.stringify({ 
-                model: "qwen/qwen3.8-27b", // Multimodal Vision Model
+                model: "qwen/qwen3.8-27b", 
                 messages: finalMessages, 
                 temperature: 0.7 
             })
@@ -174,63 +164,23 @@ fastify.get("/api/music/play/:id", async (req, reply) => {
     }
 });
 
-/* -------------------- STATIC FILES -------------------- */
+// --- Static Files ---
+fastify.register(fastifyStatic, { root: publicPath, decorateReply: true, index: "index.html" });
+fastify.register(fastifyStatic, { root: scramjetPath, prefix: "/scram/", decorateReply: false });
+fastify.register(fastifyStatic, { root: libcurlPath, prefix: "/libcurl/", decorateReply: false });
+fastify.register(fastifyStatic, { root: baremuxPath, prefix: "/baremux/", decorateReply: false });
 
-fastify.register(fastifyStatic, {
-    root: publicPath,
-    decorateReply: true,
-    index: "index.html",
-});
-
-fastify.register(fastifyStatic, {
-    root: scramjetPath,
-    prefix: "/scram/",
-    decorateReply: false,
-});
-
-fastify.register(fastifyStatic, {
-    root: libcurlPath,
-    prefix: "/libcurl/",
-    decorateReply: false,
-});
-
-fastify.register(fastifyStatic, {
-    root: baremuxPath,
-    prefix: "/baremux/",
-    decorateReply: false,
-});
-
-/* -------------------- ROOT ROUTE -------------------- */
-
-fastify.get("/", async (req, reply) => {
-    return reply.sendFile("index.html");
-});
-
-/* -------------------- HEALTH CHECK -------------------- */
-
-fastify.get("/health", async () => {
-    return { status: "ok" };
-});
-
-/* -------------------- 404 HANDLER -------------------- */
-
-fastify.setNotFoundHandler((request, reply) => {
-    return reply.code(404).type("text/html").sendFile("404.html");
-});
-
-/* -------------------- LOGGING -------------------- */
+fastify.get("/", async (req, reply) => { return reply.sendFile("index.html"); });
+fastify.get("/health", async () => { return { status: "ok" }; });
+fastify.setNotFoundHandler((request, reply) => { return reply.code(404).type("text/html").sendFile("404.html"); });
 
 fastify.server.on("listening", () => {
     const address = fastify.server.address();
     console.log("Listening on:");
     console.log(`\thttp://localhost:${address.port}`);
     console.log(`\thttp://${hostname()}:${address.port}`);
-    console.log(
-        `\thttp://${address.family === "IPv6" ? `[${address.address}]` : address.address}:${address.port}`
-    );
+    console.log(`\thttp://${address.family === "IPv6" ? `[${address.address}]` : address.address}:${address.port}`);
 });
-
-/* -------------------- SHUTDOWN -------------------- */
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
@@ -240,16 +190,11 @@ function shutdown() {
     fastify.close(() => process.exit(0));
 }
 
-/* -------------------- START SERVER -------------------- */
-
 let port = parseInt(process.env.PORT || "");
 if (isNaN(port)) port = 8080;
 
 try {
-    await fastify.listen({
-        port,
-        host: "0.0.0.0",
-    });
+    await fastify.listen({ port, host: "0.0.0.0" });
 } catch (err) {
     console.error(err);
     process.exit(1);
