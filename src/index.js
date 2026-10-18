@@ -13,14 +13,11 @@ import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
 
 /* -------------------- PATH FIX -------------------- */
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const publicPath = path.join(__dirname, "../public");
 
 /* -------------------- WISP CONFIG -------------------- */
-
 logging.set_level(logging.NONE);
 
 Object.assign(wisp.options, {
@@ -30,7 +27,6 @@ Object.assign(wisp.options, {
 });
 
 /* -------------------- FASTIFY SERVER -------------------- */
-
 const fastify = Fastify({
     serverFactory: (handler) => {
         return createServer()
@@ -116,7 +112,6 @@ fastify.post("/api/ai/chat", async (req, reply) => {
 
 // --- Music API ---
 fastify.get("/api/music/browse", async (req, reply) => {
-    // Mock data for testing. Replace with your actual SoundCloud/YouTube logic.
     reply.send({
         sections: [
             {
