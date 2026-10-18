@@ -91,23 +91,53 @@ fastify.get("/api/tmdb/search", async (req, reply) => {
     } catch (e) { reply.status(500).send({ error: e.message }); }
 });
 
-// --- AI (Groq) API ---
+// --- AI (Groq) API with Vision ---
 const GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_YOUR_GROQ_API_KEY_HERE';
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 fastify.post("/api/ai/chat", async (req, reply) => {
-    const { messages } = req.body;
+    const { messages, image } = req.body;
+    
     if (!messages) return reply.status(400).send({ error: "Missing messages" });
+
+    let finalMessages = [...messages];
+    
+    // If an image is provided, structure it for the Vision model
+    if (image) {
+        const lastMsg = finalMessages.pop();
+        finalMessages.push({
+            role: "user",
+            content: [
+                { type: "text", text: lastMsg.content || "Analyze this image." },
+                { type: "image_url", image_url: { url: image } }
+            ]
+        });
+    }
+
     try {
         const response = await fetch(GROQ_API_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
-            body: JSON.stringify({ model: "llama3-8b-8192", messages, temperature: 0.7 })
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${GROQ_API_KEY}` 
+            },
+            body: JSON.stringify({ 
+                model: "qwen/qwen3.8-27b", // Multimodal Vision Model
+                messages: finalMessages, 
+                temperature: 0.7 
+            })
         });
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error?.message || `API Error: ${response.status}`);
+        }
+
         const data = await response.json();
         reply.send({ text: data.choices[0].message.content });
-    } catch (error) { reply.status(500).send({ error: error.message }); }
+    } catch (error) { 
+        reply.status(500).send({ error: error.message }); 
+    }
 });
 
 // --- Music API ---
