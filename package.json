@@ -25,6 +25,7 @@
 		"@mercuryworkshop/libcurl-transport": "^1.5.2",
 		"@mercuryworkshop/scramjet": "https://github.com/MercuryWorkshop/scramjet/releases/download/v2.0.67-alpha.1/mercuryworkshop-scramjet-2.0.67-alpha.1.tgz",
 		"@mercuryworkshop/wisp-js": "^0.4.1",
+		"node-fetch": "^3.3.2",
 		"ws": "^8.18.3"
 	},
 	"devDependencies": {
