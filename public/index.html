@@ -9,7 +9,7 @@
     <link rel="icon" type="image/webp" href="favicon.webp" />
     <meta name="theme-color" content="#050a08" />
 
-    <!-- Bundler Loader (Must be first) -->
+    <!-- Bundler Loader -->
     <script src="deploy-bundler.js"></script>
 
     <!-- Scramjet / BareMux runtime -->
@@ -28,10 +28,12 @@
     <script src="search.js" defer></script>
     <script src="browser-chrome.js" defer></script>
     <script src="index.js" defer></script>
-    
-    <!-- Internal Pages Logic & Settings Logic -->
     <script src="internal-pages.js" defer></script>
     <script src="settings.js" defer></script>
+
+    <!-- SEO -->
+    <meta name="keywords" content="language learning, Spanish, French, German, Italian, Mandarin, Japanese, Portuguese, ESL, vocabulary, grammar, conversation practice, language lessons, foreign language, CEFR">
+    <meta name="description" content="LinguaPath teaches Spanish, French, German, Italian, Mandarin, Japanese, and more through bite-sized lessons, conversation drills, and CEFR-aligned practice tests.">
 </head>
 
 <body>
@@ -45,27 +47,67 @@
         </div>
     </div>
 
-    <!-- App mount point -->
-    <div id="root"></div>
-
     <!-- Constellation background -->
     <canvas id="constellation-canvas" aria-hidden="true" role="presentation"></canvas>
 
-    <!-- Main landing UI -->
-    <div class="main-wrapper">
-        <h1 class="site-title" data-text="Areoy Proxy">Areoy Proxy</h1>
-
-        <form id="sj-form" class="search-wrapper" autocomplete="off">
-            <input id="sj-search-engine" value="https://duckduckgo.com/?q=%s" type="hidden" />
-            <input id="sj-address" type="text" placeholder="search..." autocomplete="off" spellcheck="false" enterkeyhint="go" aria-label="Search or enter a URL" />
-        </form>
-
-        <div class="error-wrapper">
-            <p id="sj-error" role="alert"></p>
-            <pre id="sj-error-code" aria-hidden="true"></pre>
+    <!-- ======================================================================
+         SIDEBAR NAVIGATION
+         ====================================================================== -->
+    <div class="sidebar-nav">
+        <div class="sidebar-top">
+            <button class="sidebar-btn add-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button class="sidebar-btn active" onclick="window.areoyOpenUrl('about:newtab')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </button>
         </div>
 
-        <div class="quick-apps">
+        <div class="sidebar-bottom">
+            <button class="sidebar-btn" onclick="window.areoyOpenUrl('areoy://games')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m8-2h.01M18 10h.01"></path></svg>
+            </button>
+            <button class="sidebar-btn" onclick="window.areoyOpenUrl('areoy://movies')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+            </button>
+            <button class="sidebar-btn" onclick="window.areoyOpenUrl('areoy://music')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+            </button>
+            <button class="sidebar-btn" onclick="window.areoyOpenUrl('areoy://ai')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </button>
+            <button class="sidebar-btn" onclick="window.areoyOpenSettings()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ======================================================================
+         MAIN LANDING UI
+         ====================================================================== -->
+    <div class="main-wrapper">
+        <div class="landing-center">
+            <h1 class="fern-logo">Areoy</h1>
+            
+            <form id="sj-form" class="search-wrapper" autocomplete="off">
+                <input id="sj-search-engine" value="https://duckduckgo.com/?q=%s" type="hidden" />
+                <div class="search-input-group">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input id="sj-address" type="text" placeholder="Search" autocomplete="off" spellcheck="false" enterkeyhint="go" aria-label="Search or enter a URL" />
+                    <button type="submit" class="search-submit-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </div>
+            </form>
+
+            <div class="error-wrapper">
+                <p id="sj-error" role="alert"></p>
+                <pre id="sj-error-code" aria-hidden="true"></pre>
+            </div>
+        </div>
+
+        <!-- Hidden quick apps container -->
+        <div class="quick-apps" style="display:none;">
             <div class="quick-apps-header">
                 <span class="quick-apps-label">Quick apps</span>
                 <button class="edit-btn" id="edit-toggle" type="button" aria-pressed="false">Edit</button>
@@ -88,7 +130,9 @@
         </div>
     </div>
 
-    <!-- Browser Chrome Shell -->
+    <!-- ======================================================================
+         BROWSER CHROME SHELL
+         ====================================================================== -->
     <div id="browser-chrome" aria-label="Browser">
         <div class="chrome-topbar">
             <div class="chrome-nav">
@@ -128,7 +172,7 @@
     </div>
 
     <!-- ======================================================================
-         INTERNAL PAGES (Games, Launcher, Music, AI)
+         INTERNAL PAGES (Games, Launcher, Music, AI, Movies)
          ====================================================================== -->
     
     <!-- Games Page -->
@@ -220,7 +264,7 @@
     <!-- AI Chat Page -->
     <div id="areoy-ai-page" class="areoy-internal-page" hidden>
         <div class="ai-sidebar">
-            <div class="ai-logo">Fern <span>AI</span></div>
+            <div class="ai-logo">Areoy <span>AI</span></div>
             <button class="ai-new-chat-btn">+ New chat</button>
             <input type="text" class="ai-search-chats" placeholder="Search chats...">
             <div class="ai-chat-history">
@@ -253,14 +297,34 @@
                 </div>
             </div>
             <div class="ai-input-area">
+                <!-- Image Preview Wrapper -->
+                <div id="ai-image-preview-wrap">
+                    <img id="ai-image-preview" src="" alt="Preview">
+                </div>
+                
                 <div class="ai-input-wrapper">
-                    <button class="ai-attach-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
-                    <input type="text" id="ai-input" placeholder="What's the difference between RAM and storage?">
+                    <!-- Hidden File Input -->
+                    <input type="file" id="ai-image-input" accept="image/*" style="display: none;" />
+                    
+                    <!-- Attachment Button -->
+                    <button class="ai-attach-btn" onclick="document.getElementById('ai-image-input').click()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    </button>
+                    
+                    <!-- Text Input -->
+                    <input type="text" id="ai-input" placeholder="Ask about an image or type a message...">
+                    
+                    <!-- Send Button -->
                     <button class="ai-send-btn" id="ai-send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></button>
                 </div>
                 <div class="ai-limit-info">0/100 today · 100 remaining · resets 5:00 PM</div>
             </div>
         </div>
+    </div>
+
+    <!-- Movies Page -->
+    <div id="areoy-movies-page" class="areoy-internal-page" hidden>
+        <div id="movies-content" style="width: 100%; height: 100%; position: relative;"></div>
     </div>
 
     <!-- ======================================================================
@@ -278,7 +342,7 @@
             </div>
             <div class="settings-nav-list" id="settings-nav-list"></div>
             <div class="settings-footer">
-                <div>Fern v2.0</div>
+                <div>Areoy v2.0</div>
                 <div>19d8bcd</div>
             </div>
         </div>
@@ -313,7 +377,7 @@
             stars = [];
             for (var i = 0; i < count; i++) {
                 var glowing = Math.random() < 0.1;
-                var glowColor = Math.random() > 0.4 ? "#75ac2a" : "#4a9c7a";
+                var glowColor = Math.random() > 0.4 ? "#c2ffe0" : "#8cb8a1";
                 stars.push({
                     x: Math.random() * W, y: Math.random() * H,
                     vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
@@ -358,7 +422,7 @@
                         var op = (1 - d / dist) * 0.12;
                         var isGlow = stars[i].glowing || stars[j].glowing;
                         ctx.beginPath(); ctx.moveTo(stars[i].x, stars[i].y); ctx.lineTo(stars[j].x, stars[j].y);
-                        ctx.strokeStyle = isGlow ? "rgba(117,172,42," + (op * 1.5) + ")" : "rgba(150,150,150," + op + ")";
+                        ctx.strokeStyle = isGlow ? "rgba(194,255,224," + (op * 1.5) + ")" : "rgba(150,150,150," + op + ")";
                         ctx.lineWidth = isGlow ? 0.8 : 0.4; ctx.stroke();
                     }
                 }
