@@ -661,69 +661,120 @@
     };
 
     // ----------------------------------------------------------------------
-    // AI LOGIC
+    // AI LOGIC (With Vision Support)
     // ----------------------------------------------------------------------
-    var GROQ_API_KEY = "gsk_YOUR_GROQ_API_KEY_HERE"; 
-    var GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-
     var aiInput = document.getElementById("ai-input");
     var aiSend = document.getElementById("ai-send-btn");
     var aiChatContainer = document.getElementById("ai-chat-container");
     var aiWelcome = document.getElementById("ai-welcome");
+    var aiImageInput = document.getElementById("ai-image-input");
+    var aiImagePreview = document.getElementById("ai-image-preview");
+    
     var chatHistory = [{ role: "system", content: "You are Areoy AI, a helpful assistant built into the Areoy browser. Be concise and helpful." }];
+    var currentImageBase64 = null;
 
-    function appendMessage(role, text) {
+    // Handle Image Selection
+    if (aiImageInput) {
+        aiImageInput.addEventListener("change", function() {
+            var file = this.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageBase64 = e.target.result;
+                aiImagePreview.src = currentImageBase64;
+                aiImagePreview.parentElement.style.display = "block"; // Show wrapper
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function appendMessage(role, text, imgSrc) {
         var msgDiv = document.createElement("div");
         msgDiv.className = "ai-message " + role;
-        msgDiv.innerHTML = `<div class="ai-avatar"></div><div class="ai-msg-content">${text.replace(/\n/g, '<br>')}</div>`;
+        
+        var contentHtml = text.replace(/\n/g, '<br>');
+        if (imgSrc) {
+            contentHtml += `<br><img src="${imgSrc}" style="max-width: 200px; border-radius: 8px; margin-top: 8px;">`;
+        }
+        
+        msgDiv.innerHTML = `<div class="ai-avatar"></div><div class="ai-msg-content">${contentHtml}</div>`;
         aiChatContainer.appendChild(msgDiv);
         aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
     }
 
     async function sendMessage() {
         var text = aiInput.value.trim();
-        if (!text) return;
+        if (!text && !currentImageBase64) return;
+        
         if (aiWelcome) aiWelcome.style.display = "none";
-        appendMessage("user", text);
-        chatHistory.push({ role: "user", content: text });
+        
+        // Add user message to UI
+        appendMessage("user", text || "Analyze this image.", currentImageBase64);
+        
+        // Push to history (text only for now, image handled separately in API call)
+        chatHistory.push({ role: "user", content: text || "Analyze this image." });
+        
+        var imgToSend = currentImageBase64;
+        
+        // Reset UI
         aiInput.value = "";
+        currentImageBase64 = null;
+        if (aiImagePreview) {
+            aiImagePreview.src = "";
+            aiImagePreview.parentElement.style.display = "none";
+        }
+        if (aiImageInput) aiImageInput.value = "";
 
         var loadingDiv = document.createElement("div");
         loadingDiv.className = "ai-message ai";
-        loadingDiv.innerHTML = `<div class="ai-avatar"></div><div class="ai-msg-content" style="color: #888;">Thinking...</div>`;
+        loadingDiv.innerHTML = `<div class="ai-avatar"></div><div class="ai-msg-content" style="color: #888;">Analyzing...</div>`;
         aiChatContainer.appendChild(loadingDiv);
         aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
 
         try {
-            var response = await fetch(GROQ_API_URL, {
+            var response = await fetch("/api/ai/chat", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
-                body: JSON.stringify({ model: "llama3-8b-8192", messages: chatHistory, temperature: 0.7 })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    messages: chatHistory,
+                    image: imgToSend 
+                })
             });
-            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            
             var data = await response.json();
-            var aiText = data.choices[0].message.content;
+            if (!response.ok) throw new Error(data.error || "Failed");
+            
             if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
-            appendMessage("ai", aiText);
-            chatHistory.push({ role: "assistant", content: aiText });
+            
+            appendMessage("ai", data.text);
+            chatHistory.push({ role: "assistant", content: data.text });
+            
         } catch (error) {
             if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
-            appendMessage("ai", "Sorry, I encountered an error. Make sure your API key is valid and you are online.");
+            appendMessage("ai", "Sorry, I encountered an error: " + error.message);
         }
     }
 
     if (aiSend && aiInput) {
         aiSend.addEventListener("click", sendMessage);
         aiInput.addEventListener("keydown", function(e) { if (e.key === "Enter") sendMessage(); });
+        
         document.querySelectorAll(".ai-suggestion").forEach(function(btn) {
             btn.addEventListener("click", function() { aiInput.value = this.textContent.trim(); sendMessage(); });
         });
+        
         var clearBtn = document.querySelector(".ai-clear-btn");
         if (clearBtn) {
             clearBtn.addEventListener("click", function() {
                 chatHistory = [{ role: "system", content: "You are Areoy AI, a helpful assistant built into the Areoy browser. Be concise and helpful." }];
                 aiChatContainer.innerHTML = "";
                 if (aiWelcome) aiWelcome.style.display = "block";
+                currentImageBase64 = null;
+                if (aiImagePreview) {
+                    aiImagePreview.src = "";
+                    aiImagePreview.parentElement.style.display = "none";
+                }
             });
         }
     }
